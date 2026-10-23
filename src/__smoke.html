@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#f4f6fd">
+<title>Temporary PDF Studio Regression Tests</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,sans-serif;background:#f4f6fd;color:#171b30}
+body{margin:0;padding:24px;max-width:1000px;margin-inline:auto}
+button{border:0;background:#685cff;color:#fff;font-weight:700;border-radius:10px;padding:12px 18px;cursor:pointer}
+#status{padding:12px;background:#fff;border:1px solid #dce2f3;border-radius:10px;margin:16px 0;white-space:pre-wrap}
+iframe{width:100%;height:720px;border:1px solid #ccd4e7;border-radius:12px;background:white}
+.pass{color:#08785f}.fail{color:#9b1c31}
+</style>
+</head>
+<body>
+<h1>PDF Studio regression runner</h1>
+<p>This unlinked page creates synthetic files locally in the browser, runs the actual PDF Studio UI, and checks resulting exports. No files are uploaded.</p>
+<button id="run" type="button">Run browser tests</button>
+<div id="status" aria-live="polite">Waiting to run.</div>
+<iframe id="app" title="Orbital PDF Studio test instance" src="/?regression=1"></iframe>
+<script>
+(function(){
+"use strict";
+var btn=document.getElementById("run");
+var status=document.getElementById("status");
+var frame=document.getElementById("app");
+var started=false;
+function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}
+async function until(fn,timeout,message){
+ var start=Date.now();
+ while(Date.now()-start<timeout){try{if(fn())return;}catch(e){}await wait(100);}
+ throw new Error(message||"Timed out waiting for expected state.");
+}
+function say(lines){status.textContent=lines.join("\n");}
+function assert(condition,message){if(!condition)throw new Error(message);}
+function addResult(results,name,fn){try{var detail=awaitable(fn);results.push({name:name,status:"pass",detail:detail});}catch(e){results.push({name:name,status:"fail",error:String(e&&e.message||e)});}}
+function awaitable(v){return v;}
+async function runAll(){
+ if(started)return;
+ started=true;btn.disabled=true;btn.textContent="Running…";
+ var results=[];
+ try{
+  await until(function(){return frame.contentDocument&&frame.contentWindow&&frame.contentDocument.readyState==="complete";},30000,"The app iframe did not finish loading.");
+  var w=frame.contentWindow,d=frame.contentDocument;
+  await until(function(){return !!(w.PDFLib&&w.pdfjsLib&&w.JSZip&&d.getElementById("pdfInput")&&d.getElementById("runBtn"));},30000,"Required PDF libraries or upload elements did not load.");
+  var originalCreate=w.URL.createObjectURL.bind(w.URL);
+  var blobByUrl=new Map();
+  var downloads=[];
+  w.URL.createObjectURL=function(blob){var url=originalCreate(blob);blobByUrl.set(url,blob);return url;};
+  var originalClick=w.HTMLAnchorElement.prototype.click;
+  w.HTMLAnchorElement.prototype.click=function(){
+   if(this.download&&this.href&&this.href.indexOf("blob:")===0){downloads.push({name:this.download,blob:blobByUrl.get(this.href)||null});return;}
+   return originalClick.call(this);
+  };
+  function setOpt(key,value){
+   var el=d.querySelector('[data-opt="'+key+'"]');
+   assert(!!el,"Missing settings input: "+key);
+   if(el.type==="checkbox")el.checked=!!value;
+   else el.value=String(value);
+   el.dispatchEvent(new w.Event("input",{bubbles:true}));
+   el.dispatchEvent(new w.Event("change",{bubbles:true}));
+  }
+  async function makePdf(){
+   var pdf=await w.PDFLib.PDFDocument.create();
+   var font=await pdf.embedFont(w.PDFLib.StandardFonts.Helvetica);
+   var p1=pdf.addPage([420,595]);p1.drawText("Orbital test first page",{x:36,y:530,font:font,size:16});
+   var p2=pdf.addPage([420,595]);p2.drawText("Orbital test second page",{x:36,y:530,font:font,size:16});
+   return await pdf.save();
+  }
+  function setFiles(input,items){
+   var dt=new w.DataTransfer();items.forEach(function(f){dt.items.add(f);});input.files=dt.files;
+   input.dispatchEvent(new w.Event("change",{bubbles:true}));
+  }
+  async function switchTool(id){
+   var button=d.querySelector('[data-tool="'+id+'"]');
+   assert(!!button,"Missing tool card: "+id);
+   button.click();
+   await until(function(){return d.querySelector("#settingsTitle").textContent.trim()!=="";},3000,"Settings heading did not update for "+id);
+  }
+  async function runExport(id,options,expectedExtension){
+   await switchTool(id);
+   Object.keys(options||{}).forEach(function(key){setOpt(key,options[key]);});
+   var before=downloads.length;
+   var outputStatus=d.querySelector("#status");
+   outputStatus.dataset.kind="testing";outputStatus.textContent="Test running";
+   d.querySelector("#runBtn").click();
+   await until(function(){return outputStatus.dataset.kind==="success"||outputStatus.dataset.kind==="error";},30000,"Export timed out for "+id);
+   assert(outputStatus.dataset.kind==="success",id+" reported error: "+outputStatus.textContent);
+   assert(downloads.length===before+1,id+" did not trigger exactly one download.");
+   var dl=downloads[downloads.length-1];
+   assert(dl.blob&&dl.blob.size>0,id+" triggered a download without a blob.");
+   if(expectedExtension)assert(dl.name.toLowerCase().endsWith(expectedExtension),id+" downloaded unexpected filename: "+dl.name);
+   return {download:dl.name,bytes:dl.blob.size,status:outputStatus.textContent,blob:dl.blob};
+  }
+  var bytes=await makePdf();
+  var sampleA=new w.File([bytes],"sample-a.pdf",{type:"application/pdf",lastModified:Date.now()});
+  var sampleB=new w.File([bytes],"sample-b.pdf",{type:"application/pdf",lastModified:Date.now()+1});
+  setFiles(d.querySelector("#pdfInput"),[sampleA,sampleB]);
+  await until(function(){return d.querySelector("#fileCount").textContent.indexOf("2")===0;},5000,"PDF files were not accepted into the queue.");
+  results.push({name:"Synthetic PDF setup + queue",status:"pass",detail:"Two local 2-page synthetic PDFs accepted."});
+
+  try{
+   var merge=await runExport("merge",{outputName:"test-merged.pdf",pageSize:"preserve",sortFiles:"custom",blankBetween:false},".pdf");
+   var merged=await w.PDFLib.PDFDocument.load(new Uint8Array(await merge.blob.arrayBuffer()));
+   assert(merged.getPageCount()===4,"Merge output should contain 4 pages but had "+merged.getPageCount());
+   results.push({name:"Merge PDFs",status:"pass",detail:merge.download+" · "+merged.getPageCount()+" pages"});
+  }catch(e){results.push({name:"Merge PDFs",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var split=await runExport("split",{outputName:"test-split.pdf",range:"1-2",splitMode:"single"},".pdf");
+   var splitDoc=await w.PDFLib.PDFDocument.load(new Uint8Array(await split.blob.arrayBuffer()));
+   assert(splitDoc.getPageCount()===2,"Split output should have 2 pages.");
+   results.push({name:"Split PDF (single)",status:"pass",detail:split.download+" · 2 pages"});
+  }catch(e){results.push({name:"Split PDF (single)",status:"fail",error:String(e.message||e)});}
+  try{
+   var splitZip=await runExport("split",{outputName:"test-split-pages.zip",range:"1-2",splitMode:"each",chunkSize:"1"},".zip");
+   var zip=await w.JSZip.loadAsync(splitZip.blob);
+   assert(Object.keys(zip.files).filter(function(n){return /\.pdf$/i.test(n);}).length===2,"Per-page ZIP did not contain 2 PDFs.");
+   results.push({name:"Split PDF (ZIP per page)",status:"pass",detail:splitZip.download+" · 2 PDFs"});
+  }catch(e){results.push({name:"Split PDF (ZIP per page)",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var organize=await runExport("organize",{outputName:"test-organized.pdf",pageOrder:"2,1",removeRanges:"",rotateDegrees:"90"},".pdf");
+   var organized=await w.PDFLib.PDFDocument.load(new Uint8Array(await organize.blob.arrayBuffer()));
+   assert(organized.getPageCount()===2,"Organize output should have 2 pages.");
+   assert(Math.round(organized.getPages()[0].getRotation().angle||0)===90,"Organize rotation was not applied.");
+   results.push({name:"Organize pages",status:"pass",detail:organize.download+" · order and rotation verified"});
+  }catch(e){results.push({name:"Organize pages",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var annotate=await runExport("annotate",{outputName:"test-annotated.pdf",noteText:"Reviewed by QA",noteColor:"#1688ff",noteSize:"12",noteOpacity:"90",notePosition:"bottom-right",noteBold:true,range:""},".pdf");
+   var annotation=await w.PDFLib.PDFDocument.load(new Uint8Array(await annotate.blob.arrayBuffer()));
+   assert(annotation.getPageCount()===2,"Annotation output should have 2 pages.");
+   results.push({name:"Annotate PDF",status:"pass",detail:annotate.download+" · 2 pages"});
+  }catch(e){results.push({name:"Annotate PDF",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var watermark=await runExport("watermark",{outputName:"test-watermark.pdf",waterText:"CONFIDENTIAL",waterOpacity:"22",waterAngle:"-25",waterSize:"18",waterPosition:"center",addNumbers:true,numberStart:"1",numberAlign:"right",numberPosition:"bottom-right",range:""},".pdf");
+   var water=await w.PDFLib.PDFDocument.load(new Uint8Array(await watermark.blob.arrayBuffer()));
+   assert(water.getPageCount()===2,"Watermark output should have 2 pages.");
+   results.push({name:"Watermark + page numbers",status:"pass",detail:watermark.download+" · 2 pages"});
+  }catch(e){results.push({name:"Watermark + page numbers",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var optimize=await runExport("optimize",{outputName:"test-optimized.pdf",objectStreams:true,stripMetadata:true, optimizeNote:"No image recompression"},".pdf");
+   var optimized=await w.PDFLib.PDFDocument.load(new Uint8Array(await optimize.blob.arrayBuffer()));
+   assert(optimized.getPageCount()===2,"Optimize output should have 2 pages.");
+   results.push({name:"Optimize PDF",status:"pass",detail:optimize.download+" · valid 2-page PDF"});
+  }catch(e){results.push({name:"Optimize PDF",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var extract=await runExport("extract",{outputName:"test-extracted.txt",range:"",textSeparator:"paragraph",pageHeadings:true},".txt");
+   var text=await extract.blob.text();
+   assert(text.indexOf("Orbital test first page")>=0&&text.indexOf("Orbital test second page")>=0,"Extracted text does not contain expected sample text.");
+   results.push({name:"Extract text",status:"pass",detail:extract.download+" · both page strings verified"});
+  }catch(e){results.push({name:"Extract text",status:"fail",error:String(e.message||e)});}
+
+  try{
+   var pngZip=await runExport("pdf-images",{outputName:"test-png-pages.zip",range:"1-2",renderScale:"1",imagePrefix:"page"},".zip");
+   var z=await w.JSZip.loadAsync(pngZip.blob);
+   var entries=Object.keys(z.files).filter(function(n){return /\.png$/i.test(n);});
+   assert(entries.length===2,"PDF-to-PNG ZIP should contain 2 PNGs.");
+   results.push({name:"PDF to PNG",status:"pass",detail:pngZip.download+" · "+entries.length+" PNG files"});
+  }catch(e){results.push({name:"PDF to PNG",status:"fail",error:String(e.message||e)});}
+
+  try{
+   await switchTool("images");
+   var canvas=d.createElement("canvas");canvas.width=32;canvas.height=24;
+   var ctx=canvas.getContext("2d");ctx.fillStyle="#ff6600";ctx.fillRect(0,0,32,24);
+   var png=await new Promise(function(resolve){canvas.toBlob(resolve,"image/png");});
+   assert(!!png,"Could not create synthetic image.");
+   var imageFile=new w.File([png],"test-image.png",{type:"image/png",lastModified:Date.now()+2});
+   setFiles(d.querySelector("#imageInput"),[imageFile]);
+   await until(function(){return d.querySelector("#fileCount").textContent.indexOf("1")===0;},5000,"Image was not accepted into the queue.");
+   var imgResult=await runExport("images",{outputName:"test-images-to-pdf.pdf",paperSize:"a4",orientation:"auto",imageFit:"contain",imageMargin:"12",imageQuality:"original"},".pdf");
+   var imagePdf=await w.PDFLib.PDFDocument.load(new Uint8Array(await imgResult.blob.arrayBuffer()));
+   assert(imagePdf.getPageCount()===1,"Images-to-PDF should create 1 page.");
+   results.push({name:"Images to PDF",status:"pass",detail:imgResult.download+" · valid 1-page PDF"});
+  }catch(e){results.push({name:"Images to PDF",status:"fail",error:String(e.message||e)});}
+
+  results.unshift({name:"Light-only + UI setup",status:"pass",detail:"PDFLib, PDF.js, JSZip and local file inputs loaded."});
+ }catch(error){
+  results.push({name:"Harness setup",status:"fail",error:String(error&&error.message||error)});
+ }finally{
+  status.innerHTML="";
+  var summary=document.createElement("div");
+  var passed=results.filter(function(r){return r.status==="pass";}).length;
+  var failed=results.length-passed;
+  var heading=document.createElement("h2");
+  heading.textContent="Results: "+passed+" passed · "+failed+" failed";
+  status.appendChild(heading);
+  results.forEach(function(r){
+   var line=document.createElement("p");
+   line.className=r.status==="pass"?"pass":"fail";
+   line.textContent=(r.status==="pass"?"PASS — ":"FAIL — ")+r.name+": "+(r.detail||r.error||"");
+   status.appendChild(line);
+  });
+  var pre=document.createElement("pre");
+  pre.textContent=JSON.stringify({passed:passed,failed:failed,results:results},null,2);
+  status.appendChild(pre);
+  btn.textContent="Run again";btn.disabled=false;started=false;
+ }
+}
+btn.addEventListener("click",function(){runAll();});
+})();
+</script>
+</body>
+</html>
