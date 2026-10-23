@@ -70,8 +70,8 @@ async function runAll(){
   async function makePdf(){
    stage="PDFDocument.create";var pdf=await w.PDFLib.PDFDocument.create();
    stage="embed Helvetica";var font=await pdf.embedFont(w.PDFLib.StandardFonts.Helvetica);
-   stage="add first sample page";var p1=pdf.addPage([420,595]);p1.drawText("Orbital test first page",{x:36,y:530,font:font,size:16});
-   stage="add second sample page";var p2=pdf.addPage([420,595]);p2.drawText("Orbital test second page",{x:36,y:530,font:font,size:16});
+   stage="add first sample page";var p1=pdf.addPage(new w.Array(420,595));p1.drawText("Orbital test first page",{x:36,y:530,font:font,size:16});
+   stage="add second sample page";var p2=pdf.addPage(new w.Array(420,595));p2.drawText("Orbital test second page",{x:36,y:530,font:font,size:16});
    stage="save synthetic pdf";return await pdf.save();
   }
   function setFiles(input,items){
