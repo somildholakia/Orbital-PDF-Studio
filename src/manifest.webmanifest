@@ -1,0 +1,17 @@
+{
+  "name": "Orbital PDF Studio",
+  "short_name": "Orbital PDF",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080b16",
+  "theme_color": "#080b16",
+  "description": "Private and customizable PDF tools by Dyvona.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
