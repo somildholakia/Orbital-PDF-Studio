@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080b16">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="canonical" href="https://pdf.dyvona.in/">
+<meta name="description" content="A private, customizable PDF studio. Merge, split, organize, annotate, watermark, convert, extract text and optimize PDF files in your browser — no uploads.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Orbital PDF Studio">
+<meta property="og:title" content="Orbital PDF Studio — Your PDF workflow, your way">
+<meta property="og:description" content="Merge, split, organize, annotate, watermark and convert PDF files in your browser.">
+<meta property="og:url" content="https://pdf.dyvona.in/"><meta property="og:image" content="https://pdf.dyvona.in/og-image.svg">
+<title>Orbital PDF Studio — Your PDF workflow, your way</title>
+<link rel="stylesheet" href="/styles.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script defer src="/ads-config.js"></script><script defer src="/ads.js"></script><script defer src="/app.js"></script>
+</head>
+<body>
+<div class="topbar"><div class="topbar-inner"><a class="brand" href="/" aria-label="Orbital PDF Studio home"><img src="/favicon.svg" alt="" width="42" height="42"><span><strong>Orbital PDF Studio</strong><small>by Dyvona · Private by design</small></span></a><div class="top-actions"><button id="themeToggle" class="secondary" type="button">Toggle theme</button><a class="secondary" href="/faq.html">Help</a></div></div></div>
+<main class="wrap">
+<section class="hero"><div class="eyebrow">FREE PDF TOOLS · PRIVATE BY DESIGN</div><h1>Your PDF workflow,<br>your way.</h1><p>Merge, split, annotate, watermark, convert, and fine-tune every export with controls that match the job. Everything runs in your browser.</p><div class="hero-actions"><a class="primary" href="#workspace">Open workspace</a><a class="secondary" href="#tools">Explore all tools</a></div><div class="trust-row"><span>✓ Files stay on your device</span><span>✓ No account needed</span><span>✓ Clear export settings</span></div></section>
+<section id="tools" class="tools-section"><p class="eyebrow">ONE STUDIO · NINE WORKFLOWS</p><h2>Pick the job. Tune the details.</h2><p>Each tool reveals settings built for that task, not a one-size-fits-all menu.</p><div class="tool-grid">
+<button class="tool-card" data-tool="merge" aria-pressed="true"><span>↔</span><strong>Merge PDFs</strong><small>Combine documents</small></button>
+<button class="tool-card" data-tool="split" aria-pressed="false"><span>✂</span><strong>Split PDF</strong><small>Extract pages or batches</small></button>
+<button class="tool-card" data-tool="organize" aria-pressed="false"><span>▤</span><strong>Organize pages</strong><small>Reorder, remove, rotate</small></button>
+<button class="tool-card" data-tool="annotate" aria-pressed="false"><span>✎</span><strong>Annotate PDF</strong><small>Add text notes</small></button>
+<button class="tool-card" data-tool="watermark" aria-pressed="false"><span>◈</span><strong>Watermark PDF</strong><small>Brand and number pages</small></button>
+<button class="tool-card" data-tool="images" aria-pressed="false"><span>▧</span><strong>Images to PDF</strong><small>Convert photos</small></button>
+<button class="tool-card" data-tool="pdf-images" aria-pressed="false"><span>▦</span><strong>PDF to PNG</strong><small>Export page images</small></button>
+<button class="tool-card" data-tool="extract" aria-pressed="false"><span>¶</span><strong>Extract text</strong><small>Save selectable text</small></button>
+<button class="tool-card" data-tool="optimize" aria-pressed="false"><span>⌁</span><strong>Optimize PDF</strong><small>Rewrite PDF structure</small></button>
+</div></section>
+<section id="workspace" class="workspace">
+<div class="workspace-head"><div><p class="eyebrow">YOUR LOCAL WORKSPACE</p><h2 id="workspaceHeading">Merge PDFs</h2><p id="workspaceSub">Add files, adjust the controls, then export a fresh PDF.</p></div><span class="privacy-pill">🔒 Browser-based processing</span></div>
+<div class="workspace-grid"><div class="panel file-panel"><h3>Files &amp; settings</h3><p class="muted">Files are processed in this browser tab.</p>
+<div id="dropArea" class="drop-area" role="button" tabindex="0"><div id="uploadGlyph" class="upload-glyph">⇧</div><strong id="uploadTitle">Drop your PDFs here</strong><p id="uploadHint">or choose files from your device</p><button id="chooseFiles" class="secondary" type="button">Choose files</button><input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple hidden><input id="imageInput" type="file" accept="image/*" multiple hidden></div>
+<div class="queue-head"><h3 id="queueTitle">PDF queue</h3><span id="fileCount">0 files</span></div><div id="fileList" class="file-list"><p class="muted">Add one or more files to begin.</p></div>
+<div class="preview-box" id="previewBox" hidden><div class="preview-head"><strong>Page preview</strong><span id="previewLabel">First page</span></div><canvas id="previewCanvas"></canvas><p id="previewCaption" class="muted">Preview is illustrative; export uses the original PDF page content.</p></div>
+</div>
+<div class="panel settings-panel"><p class="eyebrow">FINE-TUNE YOUR EXPORT</p><h3>Settings</h3><p class="muted">Options change with the selected tool.</p><div class="settings-title"><span id="settingsIcon">↔</span><div><h3 id="settingsTitle">Merge PDFs</h3><p id="settingsTag" class="eyebrow">COMBINE FILES</p></div></div><p id="settingsIntro">Arrange the file queue, choose how page sizes should behave, and export one document.</p><div id="toolOptions"></div><button id="runBtn" class="primary" type="button">Merge PDFs</button><a id="downloadAgain" class="secondary" href="#" hidden>Download last export again</a><p id="status" class="status" role="status">Ready — choose a workflow and keep your files on this device.</p><div id="toast" class="toast" role="status"></div></div></div>
+</section>
+<section class="personalize"><p class="eyebrow">MAKE IT FEEL LIKE YOURS</p><h2>Personalize the workspace</h2><p>Set your preferred contrast and accent for the tools on this device.</p><div class="personalize-controls"><span>Appearance</span><button data-theme="dark" class="secondary" type="button">Dark</button><button data-theme="light" class="secondary" type="button">Light</button><span>Accent color</span><button data-accent="#685cff" aria-label="Purple accent" type="button">●</button><button data-accent="#1688ff" aria-label="Blue accent" type="button">●</button><button data-accent="#0d9488" aria-label="Teal accent" type="button">●</button><button data-accent="#e879f9" aria-label="Pink accent" type="button">●</button></div></section>
+<section class="benefits"><article><strong>🔐 Private by design</strong><p>PDF files and exports stay in the browser. The app has no PDF upload backend.</p></article><article><strong>🎛️ Task-specific settings</strong><p>Page ranges, paper sizing, text styling, image layout, and output options where they matter.</p></article><article><strong>📱 Built for phones too</strong><p>Touch-friendly controls and responsive panels for laptops, tablets, and mobile browsers.</p></article></section>
+</main>
+<footer class="site-footer"><div><strong>Orbital PDF Studio</strong><span>© <span id="year"></span> Dyvona</span></div><nav><a href="/about.html">About</a><a href="/faq.html">FAQ</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a></nav></footer>
+</body></html>
