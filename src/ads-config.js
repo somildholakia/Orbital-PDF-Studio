@@ -1,0 +1,1 @@
+window.ORBITAL_ADS_CONFIG={enabled:false,publisherId:"",slots:{top:"",inline:"",footer:""}};
