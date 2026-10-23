@@ -28,6 +28,7 @@ var btn=document.getElementById("run");
 var status=document.getElementById("status");
 var frame=document.getElementById("app");
 var started=false;
+var stage="initial";
 function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}
 async function until(fn,timeout,message){
  var start=Date.now();
@@ -43,9 +44,12 @@ async function runAll(){
  started=true;btn.disabled=true;btn.textContent="Running…";
  var results=[];
  try{
+  stage="wait iframe";
   await until(function(){return frame.contentDocument&&frame.contentWindow&&frame.contentDocument.readyState==="complete";},30000,"The app iframe did not finish loading.");
   var w=frame.contentWindow,d=frame.contentDocument;
+  stage="wait libraries and upload fields";
   await until(function(){return !!(w.PDFLib&&w.pdfjsLib&&w.JSZip&&d.getElementById("pdfInput")&&d.getElementById("runBtn"));},30000,"Required PDF libraries or upload elements did not load.");
+  stage="set up download interception";
   var originalCreate=w.URL.createObjectURL.bind(w.URL);
   var blobByUrl=new Map();
   var downloads=[];
@@ -64,11 +68,11 @@ async function runAll(){
    el.dispatchEvent(new w.Event("change",{bubbles:true}));
   }
   async function makePdf(){
-   var pdf=await w.PDFLib.PDFDocument.create();
-   var font=await pdf.embedFont(w.PDFLib.StandardFonts.Helvetica);
-   var p1=pdf.addPage([420,595]);p1.drawText("Orbital test first page",{x:36,y:530,font:font,size:16});
-   var p2=pdf.addPage([420,595]);p2.drawText("Orbital test second page",{x:36,y:530,font:font,size:16});
-   return await pdf.save();
+   stage="PDFDocument.create";var pdf=await w.PDFLib.PDFDocument.create();
+   stage="embed Helvetica";var font=await pdf.embedFont(w.PDFLib.StandardFonts.Helvetica);
+   stage="add first sample page";var p1=pdf.addPage([420,595]);p1.drawText("Orbital test first page",{x:36,y:530,font:font,size:16});
+   stage="add second sample page";var p2=pdf.addPage([420,595]);p2.drawText("Orbital test second page",{x:36,y:530,font:font,size:16});
+   stage="save synthetic pdf";return await pdf.save();
   }
   function setFiles(input,items){
    var dt=new w.DataTransfer();items.forEach(function(f){dt.items.add(f);});input.files=dt.files;
@@ -95,12 +99,12 @@ async function runAll(){
    if(expectedExtension)assert(dl.name.toLowerCase().endsWith(expectedExtension),id+" downloaded unexpected filename: "+dl.name);
    return {download:dl.name,bytes:dl.blob.size,status:outputStatus.textContent,blob:dl.blob};
   }
-  var bytes=await makePdf();
+  stage="make 2-page synthetic PDF";var bytes=await makePdf();
   var sampleA=new w.File([bytes],"sample-a.pdf",{type:"application/pdf",lastModified:Date.now()});
   var sampleB=new w.File([bytes],"sample-b.pdf",{type:"application/pdf",lastModified:Date.now()+1});
-  setFiles(d.querySelector("#pdfInput"),[sampleA,sampleB]);
+  stage="attach synthetic PDFs";setFiles(d.querySelector("#pdfInput"),[sampleA,sampleB]);
   await until(function(){return d.querySelector("#fileCount").textContent.indexOf("2")===0;},5000,"PDF files were not accepted into the queue.");
-  results.push({name:"Synthetic PDF setup + queue",status:"pass",detail:"Two local 2-page synthetic PDFs accepted."});
+  stage="queue check completed";results.push({name:"Synthetic PDF setup + queue",status:"pass",detail:"Two local 2-page synthetic PDFs accepted."});
 
   try{
    var merge=await runExport("merge",{outputName:"test-merged.pdf",pageSize:"preserve",sortFiles:"custom",blankBetween:false},".pdf");
@@ -183,7 +187,7 @@ async function runAll(){
 
   results.unshift({name:"Light-only + UI setup",status:"pass",detail:"PDFLib, PDF.js, JSZip and local file inputs loaded."});
  }catch(error){
-  results.push({name:"Harness setup",status:"fail",error:String(error&&error.message||error)});
+  results.push({name:"Harness setup",status:"fail",error:"Stage: "+stage+"; "+String(error&&error.message||error)+"\n"+String(error&&error.stack||"")});
  }finally{
   status.innerHTML="";
   var summary=document.createElement("div");
