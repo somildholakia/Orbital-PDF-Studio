@@ -108,14 +108,14 @@ async function runAll(){
 
   try{
    var merge=await runExport("merge",{outputName:"test-merged.pdf",pageSize:"preserve",sortFiles:"custom",blankBetween:false},".pdf");
-   var merged=await w.PDFLib.PDFDocument.load(new Uint8Array(await merge.blob.arrayBuffer()));
+   var merged=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await merge.blob.arrayBuffer()));
    assert(merged.getPageCount()===4,"Merge output should contain 4 pages but had "+merged.getPageCount());
    results.push({name:"Merge PDFs",status:"pass",detail:merge.download+" · "+merged.getPageCount()+" pages"});
   }catch(e){results.push({name:"Merge PDFs",status:"fail",error:String(e.message||e)});}
 
   try{
    var split=await runExport("split",{outputName:"test-split.pdf",range:"1-2",splitMode:"single"},".pdf");
-   var splitDoc=await w.PDFLib.PDFDocument.load(new Uint8Array(await split.blob.arrayBuffer()));
+   var splitDoc=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await split.blob.arrayBuffer()));
    assert(splitDoc.getPageCount()===2,"Split output should have 2 pages.");
    results.push({name:"Split PDF (single)",status:"pass",detail:split.download+" · 2 pages"});
   }catch(e){results.push({name:"Split PDF (single)",status:"fail",error:String(e.message||e)});}
@@ -128,7 +128,7 @@ async function runAll(){
 
   try{
    var organize=await runExport("organize",{outputName:"test-organized.pdf",pageOrder:"2,1",removeRanges:"",rotateDegrees:"90"},".pdf");
-   var organized=await w.PDFLib.PDFDocument.load(new Uint8Array(await organize.blob.arrayBuffer()));
+   var organized=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await organize.blob.arrayBuffer()));
    assert(organized.getPageCount()===2,"Organize output should have 2 pages.");
    assert(Math.round(organized.getPages()[0].getRotation().angle||0)===90,"Organize rotation was not applied.");
    results.push({name:"Organize pages",status:"pass",detail:organize.download+" · order and rotation verified"});
@@ -136,21 +136,21 @@ async function runAll(){
 
   try{
    var annotate=await runExport("annotate",{outputName:"test-annotated.pdf",noteText:"Reviewed by QA",noteColor:"#1688ff",noteSize:"12",noteOpacity:"90",notePosition:"bottom-right",noteBold:true,range:""},".pdf");
-   var annotation=await w.PDFLib.PDFDocument.load(new Uint8Array(await annotate.blob.arrayBuffer()));
+   var annotation=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await annotate.blob.arrayBuffer()));
    assert(annotation.getPageCount()===2,"Annotation output should have 2 pages.");
    results.push({name:"Annotate PDF",status:"pass",detail:annotate.download+" · 2 pages"});
   }catch(e){results.push({name:"Annotate PDF",status:"fail",error:String(e.message||e)});}
 
   try{
    var watermark=await runExport("watermark",{outputName:"test-watermark.pdf",waterText:"CONFIDENTIAL",waterOpacity:"22",waterAngle:"-25",waterSize:"18",waterPosition:"center",addNumbers:true,numberStart:"1",numberAlign:"right",numberPosition:"bottom-right",range:""},".pdf");
-   var water=await w.PDFLib.PDFDocument.load(new Uint8Array(await watermark.blob.arrayBuffer()));
+   var water=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await watermark.blob.arrayBuffer()));
    assert(water.getPageCount()===2,"Watermark output should have 2 pages.");
    results.push({name:"Watermark + page numbers",status:"pass",detail:watermark.download+" · 2 pages"});
   }catch(e){results.push({name:"Watermark + page numbers",status:"fail",error:String(e.message||e)});}
 
   try{
    var optimize=await runExport("optimize",{outputName:"test-optimized.pdf",objectStreams:true,stripMetadata:true, optimizeNote:"No image recompression"},".pdf");
-   var optimized=await w.PDFLib.PDFDocument.load(new Uint8Array(await optimize.blob.arrayBuffer()));
+   var optimized=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await optimize.blob.arrayBuffer()));
    assert(optimized.getPageCount()===2,"Optimize output should have 2 pages.");
    results.push({name:"Optimize PDF",status:"pass",detail:optimize.download+" · valid 2-page PDF"});
   }catch(e){results.push({name:"Optimize PDF",status:"fail",error:String(e.message||e)});}
@@ -180,7 +180,7 @@ async function runAll(){
    setFiles(d.querySelector("#imageInput"),[imageFile]);
    await until(function(){return d.querySelector("#fileCount").textContent.indexOf("1")===0;},5000,"Image was not accepted into the queue.");
    var imgResult=await runExport("images",{outputName:"test-images-to-pdf.pdf",paperSize:"a4",orientation:"auto",imageFit:"contain",imageMargin:"12",imageQuality:"original"},".pdf");
-   var imagePdf=await w.PDFLib.PDFDocument.load(new Uint8Array(await imgResult.blob.arrayBuffer()));
+   var imagePdf=await w.PDFLib.PDFDocument.load(new w.Uint8Array(await imgResult.blob.arrayBuffer()));
    assert(imagePdf.getPageCount()===1,"Images-to-PDF should create 1 page.");
    results.push({name:"Images to PDF",status:"pass",detail:imgResult.download+" · valid 1-page PDF"});
   }catch(e){results.push({name:"Images to PDF",status:"fail",error:String(e.message||e)});}
